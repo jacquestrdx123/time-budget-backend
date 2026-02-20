@@ -19,24 +19,55 @@ class RegisterController extends Controller
         $name = $request->input('name');
         $email = $request->input('email');
         $password = $request->input('password');
-        $organizationName = $request->input('organization_name');
+        $tenantName = $request->input('organization_name') ?? $request->input('tenant_name');
 
         if (! $name || ! $email || ! $password) {
             return response()->json(['detail' => 'name, email, and password are required'], 422);
         }
 
+        $tenantName = $tenantName !== null ? trim((string) $tenantName) : '';
+        if ($tenantName === '') {
+            return response()->json(['detail' => 'Organization / team name is required'], 422);
+        }
+
         $normalizedEmail = strtolower(trim($email));
+
+        $tenant = Tenant::whereRaw('LOWER(TRIM(name)) = ?', [strtolower($tenantName)])->first();
+
+        if ($tenant) {
+            if (User::where('tenant_id', $tenant->id)->where('email', $normalizedEmail)->exists()) {
+                return response()->json(['detail' => 'A user with this email already exists in this organization'], 409);
+            }
+
+            try {
+                $user = User::create([
+                    'tenant_id' => $tenant->id,
+                    'name' => $name,
+                    'email' => $normalizedEmail,
+                    'password_hash' => Hash::make($password),
+                    'role' => 'member',
+                    'is_active' => false,
+                ]);
+
+                return response()->json([
+                    'message' => 'Account created. Please wait for your admin to activate your account.',
+                ], 201);
+            } catch (\Throwable $e) {
+                report($e);
+
+                return response()->json(['detail' => 'Internal server error'], 500);
+            }
+        }
+
         $existing = User::where('email', $normalizedEmail)->first();
         if ($existing) {
             return response()->json(['detail' => 'A user with this email already exists'], 409);
         }
 
         try {
-            return DB::transaction(function () use ($name, $normalizedEmail, $password, $organizationName) {
+            return DB::transaction(function () use ($name, $normalizedEmail, $password, $tenantName) {
                 $tenant = Tenant::create([
-                    'name' => $organizationName && trim((string) $organizationName) !== ''
-                        ? trim((string) $organizationName)
-                        : 'My Team',
+                    'name' => $tenantName,
                 ]);
 
                 (new SystemSettingsSeeder)->seedDefaultsForTenant($tenant->id);
@@ -47,6 +78,7 @@ class RegisterController extends Controller
                     'email' => $normalizedEmail,
                     'password_hash' => Hash::make($password),
                     'role' => 'admin',
+                    'is_active' => true,
                 ]);
 
                 $token = JWTAuth::fromUser($user);
@@ -72,6 +104,7 @@ class RegisterController extends Controller
             'name' => $user->name,
             'email' => $user->email,
             'role' => $user->role,
+            'is_active' => (bool) $user->is_active,
         ];
     }
 }

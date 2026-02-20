@@ -25,6 +25,9 @@ class LoginController extends Controller
 
         foreach ($candidates as $user) {
             if (Hash::check($password, $user->password_hash)) {
+                if (! $user->is_active) {
+                    return response()->json(['detail' => 'Your account is pending approval from your team admin.'], 403);
+                }
                 $token = JWTAuth::fromUser($user);
 
                 return response()->json([
@@ -46,6 +49,7 @@ class LoginController extends Controller
             'name' => $user->name,
             'email' => $user->email,
             'role' => $user->role,
+            'is_active' => (bool) $user->is_active,
         ];
     }
 }

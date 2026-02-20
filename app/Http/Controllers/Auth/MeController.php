@@ -18,6 +18,7 @@ class MeController extends Controller
             'name' => $user->name,
             'email' => $user->email,
             'role' => $user->role,
+            'is_active' => (bool) $user->is_active,
         ]);
     }
 }

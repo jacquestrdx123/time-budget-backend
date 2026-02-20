@@ -22,6 +22,7 @@ class UserController extends Controller
             'name' => $user->name,
             'email' => $user->email,
             'role' => $user->role,
+            'is_active' => (bool) $user->is_active,
         ];
     }
 
@@ -97,6 +98,9 @@ class UserController extends Controller
             if (in_array($role, ['admin', 'member'], true)) {
                 $updates['role'] = $role;
             }
+        }
+        if ($request->has('is_active') && $request->user()->role === 'admin') {
+            $updates['is_active'] = (bool) $request->input('is_active');
         }
 
         if (! empty($updates)) {
