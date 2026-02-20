@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class NotificationPreference extends Model
 {
+    public $timestamps = false;
+
     protected $table = 'notification_preferences';
 
     protected $fillable = [
