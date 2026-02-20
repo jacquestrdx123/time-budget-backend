@@ -25,6 +25,7 @@ return [
         'http://localhost:5173',
         'https://proxy.heartbeatnetworks.com',
         'https://time_budgeter20-0aprwuxe.on-forge.com',
+        'https://time-budget-frontend-9rn45vjo.on-forge.com',
     ],
 
     'allowed_origins_patterns' => [],
