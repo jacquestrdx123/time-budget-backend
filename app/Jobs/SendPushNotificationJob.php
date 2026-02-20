@@ -2,15 +2,13 @@
 
 namespace App\Jobs;
 
+use App\Services\FcmSender;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
-use Kreait\Firebase\Factory;
-use Kreait\Firebase\Messaging\CloudMessage;
-use Kreait\Firebase\Messaging\Notification;
 
 class SendPushNotificationJob implements ShouldQueue
 {
@@ -27,7 +25,7 @@ class SendPushNotificationJob implements ShouldQueue
         public array $data = []
     ) {}
 
-    public function handle(): void
+    public function handle(FcmSender $fcm): void
     {
         $tokens = array_filter($this->tokens);
         if ($tokens === []) {
@@ -36,14 +34,8 @@ class SendPushNotificationJob implements ShouldQueue
             return;
         }
 
-        $credentialsPath = config('timebudget.firebase_credentials_path');
-        $path = str_starts_with($credentialsPath, '/') ? $credentialsPath : base_path($credentialsPath);
-
-        if (! config('timebudget.firebase_enabled') || ! is_readable($path)) {
-            Log::warning('SendPushNotificationJob: Firebase disabled or credentials not readable, skipping.', [
-                'firebase_enabled' => config('timebudget.firebase_enabled'),
-                'path' => $path,
-            ]);
+        if (! $fcm->isConfigured()) {
+            Log::warning('SendPushNotificationJob: Firebase disabled or credentials not readable, skipping.');
 
             return;
         }
@@ -54,37 +46,15 @@ class SendPushNotificationJob implements ShouldQueue
             'body' => $this->body,
         ]);
 
-        try {
-            $factory = (new Factory)->withServiceAccount($path);
-            $messaging = $factory->createMessaging();
-        } catch (\Throwable $e) {
-            Log::error('SendPushNotificationJob: Failed to create Firebase messaging.', [
-                'error' => $e->getMessage(),
-            ]);
-
-            return;
-        }
-
-        $notification = Notification::create($this->title, $this->body);
-
         foreach ($tokens as $token) {
-            try {
-                $message = CloudMessage::new()
-                    ->withNotification($notification)
-                    ->withToken($token);
-
-                if ($this->data !== []) {
-                    $message = $message->withData($this->data);
-                }
-
-                $messaging->send($message);
+            $ok = $fcm->send($token, $this->title, $this->body, $this->data);
+            if ($ok) {
                 Log::info('SendPushNotificationJob: Push sent successfully.', [
                     'token_preview' => substr($token, 0, 20) . '...',
                 ]);
-            } catch (\Throwable $e) {
+            } else {
                 Log::warning('SendPushNotificationJob: Push failed for token.', [
                     'token_preview' => substr($token, 0, 20) . '...',
-                    'error' => $e->getMessage(),
                 ]);
             }
         }
