@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Jobs\SendPushNotificationJob;
 use App\Models\FcmDevice;
 use App\Models\Notification;
 use App\Models\NotificationPreference;
@@ -114,11 +115,19 @@ class NotificationService
             ];
         }
 
-        // Phase 6: send test push to each device
+        $tokens = $devices->pluck('token')->all();
+        SendPushNotificationJob::dispatch(
+            $tokens,
+            'Test notification',
+            'This is a test push from TimeBudget.',
+            ['type' => 'test']
+        );
+
         return [
             'success' => true,
             'error' => null,
             'devices' => $devices->map(fn ($d) => ['id' => $d->id, 'device_name' => $d->device_name])->all(),
+            'queued' => true,
         ];
     }
 }
