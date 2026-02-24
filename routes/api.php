@@ -71,6 +71,8 @@ Route::middleware($auth)->prefix('shifts')->group(function () {
 // Clock sessions
 Route::middleware($auth)->prefix('clock-sessions')->group(function () {
     Route::get('/', [ClockSessionController::class, 'index']);
+    Route::get('/{id}', [ClockSessionController::class, 'show']);
+    Route::patch('/{id}', [ClockSessionController::class, 'update']);
 });
 
 // Reminders
