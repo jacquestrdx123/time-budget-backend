@@ -131,6 +131,10 @@ class ShiftController extends Controller
         return response()->json($shift);
     }
 
+    /**
+     * Clock in: create a clock session (actual work) only.
+     * Does NOT create a Shift. Shifts are planned work and are created via store().
+     */
     public function clockIn(Request $request): JsonResponse
     {
         $userId = $request->input('user_id');
@@ -155,6 +159,7 @@ class ShiftController extends Controller
             return response()->json(['detail' => 'Already clocked in. Please clock out first.'], 409);
         }
 
+        // Optional: link this session to an existing planned shift (never create a shift here)
         $shiftId = null;
         if ($request->filled('shift_id')) {
             $shift = Shift::where('id', $request->input('shift_id'))->where('tenant_id', $tenantId)->first();
