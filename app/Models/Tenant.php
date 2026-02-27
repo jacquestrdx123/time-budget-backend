@@ -13,4 +13,9 @@ class Tenant extends Model
     {
         return $this->hasMany(User::class);
     }
+
+    public function joinRequests(): HasMany
+    {
+        return $this->hasMany(TenantJoinRequest::class, 'tenant_id');
+    }
 }

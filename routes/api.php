@@ -13,6 +13,7 @@ use App\Http\Controllers\ReminderController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\ShiftController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\TeamJoinRequestController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -30,6 +31,9 @@ Route::prefix('auth')->group(function () {
 // Users
 Route::middleware($auth)->prefix('users')->group(function () {
     Route::get('/', [UserController::class, 'index']);
+    Route::get('/join-requests', [TeamJoinRequestController::class, 'index']);
+    Route::post('/join-requests/{id}/approve', [TeamJoinRequestController::class, 'approve']);
+    Route::post('/join-requests/{id}/reject', [TeamJoinRequestController::class, 'reject']);
     Route::get('/{userId}', [UserController::class, 'show']);
     Route::post('/', [UserController::class, 'store']);
     Route::patch('/{userId}', [UserController::class, 'update']);
